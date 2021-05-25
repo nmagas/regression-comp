@@ -115,24 +115,18 @@ save(loan_recipe, file = "data/loan_recipe.rda")
 
 
 
-# Examining random forest performance
+
+
+# examining rf performance
 
 load(file = "data/rf_tune.rda")
-
 
 rf_workflow_tuned <- rf_workflow %>% 
   finalize_workflow(select_best(rf_tune, metric = "rmse"))
 
-
 rf_results <- fit(rf_workflow_tuned, loan_train)
 
-
-
 metrics <- metric_set(rmse)
-
-
-
-
 
 predict(rf_results, new_data = loan_test) %>% 
   bind_cols(loan_test %>% select(money_made_inv)) %>% 
@@ -142,29 +136,50 @@ predict(rf_results, new_data = loan_test) %>%
 
 
 
-
-# submission code
+# rf submission code
 
 rf_final_predictions <- predict(rf_results, new_data = final_loan_test)
-
-
-
-
-
 
 submit <- read_csv("data/sampleSubmission.csv") %>% 
   bind_cols(rf_final_predictions) %>% 
   select(-Predicted) %>% 
   rename(Predicted = .pred)
 
-
-
 write_csv(file = "reg_results2.csv", submit)
   
   
+
+
+
+
+
+# examining mars performance
+
+load(file = "data/mars_tune.rda")
+
+mars_workflow_tuned <- mars_workflow %>% 
+  finalize_workflow(select_best(mars_tune, metric = "rmse"))
+
+mars_results <- fit(mars_workflow_tuned, loan_train)
+
+metrics <- metric_set(rmse)
+
+predict(mars_results, new_data = loan_test) %>% 
+  bind_cols(loan_test %>% select(money_made_inv)) %>% 
+  metrics(truth = money_made_inv, estimate = .pred)
+
+
+
+# mars submission code
   
-  
-  
+mars_final_predictions <- predict(mars_results, new_data = final_loan_test)
+
+submit_mars <- read_csv("data/sampleSubmission.csv") %>% 
+  bind_cols(mars_final_predictions) %>% 
+  select(-Predicted) %>% 
+  rename(Predicted = .pred)
+
+write_csv(file = "reg_results3.csv", submit)
   
   
   
