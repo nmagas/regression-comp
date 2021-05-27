@@ -27,7 +27,7 @@ rf_params <- parameters(rf_model) %>%
 
 
 # define tuning grid
-rf_grid <- grid_regular(rf_params, levels = 10)
+rf_grid <- grid_regular(rf_params, levels = 5)
 
 
 # workflow ----

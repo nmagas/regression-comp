@@ -50,7 +50,7 @@ corrplot(cor(loan_corr1),
 
 
 loan_corr2 <- loan %>% 
-  select(mort_acc, num_sats, num_tl_120dpd_2m, out_prncp_inv, tot_cur_bal)
+  select(mort_acc, num_sats, num_tl_120dpd_2m, out_prncp_inv, tot_cur_bal, money_made_inv)
 
 
 
@@ -83,11 +83,10 @@ loan_folds <- vfold_cv(loan_train, v = 5, repeats = 3, strata = money_made_inv)
 
 
 # creating recipe
-loan_recipe <- recipe(money_made_inv ~ annual_inc + int_rate + grade + loan_amnt + out_prncp_inv + term, data = loan_train) %>% 
-  step_other(all_nominal(), -all_outcomes(), threshold = 0.15) %>% 
+loan_recipe <- recipe(money_made_inv ~ grade + loan_amnt + out_prncp_inv + term, data = loan_train) %>% 
+  step_other(all_nominal(), -all_outcomes(), threshold = 0.1) %>% 
   step_dummy(all_nominal(), -all_outcomes(), one_hot = TRUE) %>% 
-  step_normalize(all_numeric(), -all_outcomes()) %>% 
-  step_zv(all_predictors())
+  step_normalize(all_numeric(), -all_outcomes())
 
 
 
@@ -153,6 +152,9 @@ write_csv(file = "reg_results2.csv", submit)
 
 
 
+
+
+
 # examining mars performance
 
 load(file = "data/mars_tune.rda")
@@ -180,7 +182,71 @@ submit_mars <- read_csv("data/sampleSubmission.csv") %>%
   rename(Predicted = .pred)
 
 write_csv(file = "reg_results3.csv", submit)
-  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# examining nearest neighbors performance
+
+
+load(file = "data/nn_tune.rda")
+
+nn_workflow_tuned <- nn_workflow %>% 
+  finalize_workflow(select_best(nn_tune, metric = "rmse"))
+
+nn_results <- fit(nn_workflow_tuned, loan_train)
+
+metrics <- metric_set(rmse)
+
+predict(nn_results, new_data = loan_test) %>% 
+  bind_cols(loan_test %>% select(money_made_inv)) %>% 
+  metrics(truth = money_made_inv, estimate = .pred)
+
+
+
+
+
+
+# examining rf performance (4 folds, 3 repeats, only 4 predictors)
+
+
+load(file = "data/rf_tune.rda")
+
+rf_workflow_tuned <- rf_workflow %>% 
+  finalize_workflow(select_best(rf_tune, metric = "rmse"))
+
+rf_results <- fit(rf_workflow_tuned, loan_train)
+
+metrics <- metric_set(rmse)
+
+predict(rf_results, new_data = loan_test) %>% 
+  bind_cols(loan_test %>% select(money_made_inv)) %>% 
+  metrics(truth = money_made_inv, estimate = .pred)
+
+
+
+
+# rf2 submission code
+
+rf_final_predictions <- predict(rf_results, new_data = final_loan_test)
+
+submit_rf <- read_csv("data/sampleSubmission.csv") %>% 
+  bind_cols(rf_final_predictions) %>% 
+  select(-Predicted) %>% 
+  rename(Predicted = .pred)
+
+write_csv(file = "reg_results5.csv", submit_rf)
   
   
   
