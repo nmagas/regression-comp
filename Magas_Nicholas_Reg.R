@@ -83,10 +83,11 @@ loan_folds <- vfold_cv(loan_train, v = 5, repeats = 3, strata = money_made_inv)
 
 
 # creating recipe
-loan_recipe <- recipe(money_made_inv ~ grade + loan_amnt + out_prncp_inv + term, data = loan_train) %>% 
-  step_other(all_nominal(), -all_outcomes(), threshold = 0.1) %>% 
+loan_recipe <- recipe(money_made_inv ~ annual_inc + int_rate + grade + loan_amnt + out_prncp_inv + term, data = loan_train) %>% 
+  step_other(all_nominal(), -all_outcomes(), threshold = 0.15) %>% 
   step_dummy(all_nominal(), -all_outcomes(), one_hot = TRUE) %>% 
-  step_normalize(all_numeric(), -all_outcomes())
+  step_normalize(all_numeric(), -all_outcomes()) %>% 
+  step_zv(all_predictors())
 
 
 
@@ -144,7 +145,7 @@ submit <- read_csv("data/sampleSubmission.csv") %>%
   select(-Predicted) %>% 
   rename(Predicted = .pred)
 
-write_csv(file = "reg_results2.csv", submit)
+write_csv(file = "reg_results6.csv", submit)
   
   
 
@@ -250,4 +251,31 @@ write_csv(file = "reg_results5.csv", submit_rf)
   
   
   
+
+
+
+
+
+
+
+
+
+# examining slnn performance
+
+load(file = "data/slnn_tune.rda")
+
+slnn_workflow_tuned <- slnn_workflow %>% 
+  finalize_workflow(select_best(slnn_tune, metric = "rmse"))
+
+slnn_results <- fit(slnn_workflow_tuned, loan_train)
+
+metrics <- metric_set(rmse)
+
+predict(slnn_results, new_data = loan_test) %>% 
+  bind_cols(loan_test %>% select(money_made_inv)) %>% 
+  metrics(truth = money_made_inv, estimate = .pred)
+
+
+
+
 
