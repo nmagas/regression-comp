@@ -184,5 +184,5 @@ submit_mars <- read_csv("data/sampleSubmission.csv") %>%
   select(-Predicted) %>% 
   rename(Predicted = .pred)
 
-write_csv(file = "reg_results3.csv", submit)
+write_csv(file = "reg_results3.csv", submit_mars)
 
