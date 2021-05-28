@@ -1,5 +1,6 @@
-# Model Setup, Tuning, and Submission for Random Forest model all included in this script
+# Model Setup, Tuning, and Submission for Boosted Tree model all included in this script
 # GitHub link is https://github.com/nmagas/regression-comp.git
+
 
 # Loading Packages----
 library(tidyverse)
@@ -64,7 +65,7 @@ corrplot(cor(loan_corr2),
 
 
 
-  
+
 
 
 
@@ -117,131 +118,86 @@ save(loan_recipe, file = "data/loan_recipe.rda")
 
 
 
-# Random Forest Tuning----
+# Boosted Tree Tuning----
 
 
-# loading necessary objects
+# loading necessary tuning objects
 load(file = "data/loan_folds.rda")
 load(file = "data/loan_recipe.rda")
 
 
+
 # defining model
-rf_model <- rand_forest(mtry = tune(), min_n = tune()) %>% 
+
+bt_model <- boost_tree(mtry = tune(), min_n = tune(), learn_rate = tune()) %>% 
   set_mode("regression") %>% 
-  set_engine("ranger")
+  set_engine("xgboost")
 
 
 
 
-# checking parameters
-rf_params <- parameters(rf_model) %>% 
-  update(mtry = mtry(range = c(1, 10)))
-
+# parameters
+bt_params <- parameters(bt_model) %>% 
+  update(mtry = mtry(range = c(1, 14)),
+         learn_rate = learn_rate(range = c(-5, -0.2)))
 
 
 # defining tuning grid
-rf_grid <- grid_regular(rf_params, levels = 5)
+bt_grid <- grid_regular(bt_params, levels = 5)
 
 
-# creating rf workflow
-rf_workflow <- workflow() %>% 
-  add_model(rf_model) %>% 
+
+# creating workflow
+
+bt_workflow <- workflow() %>% 
+  add_model(bt_model) %>% 
   add_recipe(loan_recipe)
 
 
+
+
 # tuning
-
-rf_tune <- rf_workflow %>% 
-  tune_grid(resamples = loan_folds, grid = rf_grid)
-
-
-
-
-# writing out results and workflow
-
-save(rf_tune, rf_workflow, file = "data/rf_tune.rda")
+bt_tune <- bt_workflow %>% 
+  tune_grid(resamples = loan_folds, grid = bt_grid)
 
 
 
 
 
-# examining rf performance
+# Writing out results & workflow
+save(bt_tune, bt_workflow, file = "data/bt_tune.rda")
 
-load(file = "data/rf_tune.rda")
 
-rf_workflow_tuned <- rf_workflow %>% 
-  finalize_workflow(select_best(rf_tune, metric = "rmse"))
 
-rf_results <- fit(rf_workflow_tuned, loan_train)
+
+
+
+
+# examining bt performance
+
+load(file = "data/bt_tune.rda")
+
+bt_workflow_tuned <- bt_workflow %>% 
+  finalize_workflow(select_best(bt_tune, metric = "rmse"))
+
+bt_results <- fit(bt_workflow_tuned, loan_train)
 
 metrics <- metric_set(rmse)
 
-predict(rf_results, new_data = loan_test) %>% 
+predict(bt_results, new_data = loan_test) %>% 
   bind_cols(loan_test %>% select(money_made_inv)) %>% 
   metrics(truth = money_made_inv, estimate = .pred)
 
 
 
 
+# bt submission code
 
-# rf submission code
+bt_final_predictions <- predict(bt_results, new_data = final_loan_test)
 
-rf_final_predictions <- predict(rf_results, new_data = final_loan_test)
-
-submit <- read_csv("data/sampleSubmission.csv") %>% 
-  bind_cols(rf_final_predictions) %>% 
+bt_submit <- read_csv("data/sampleSubmission.csv") %>% 
+  bind_cols(bt_final_predictions) %>% 
   select(-Predicted) %>% 
   rename(Predicted = .pred)
 
-write_csv(file = "reg_results7.csv", submit)
-  
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+write_csv(file = "reg_results8.csv", bt_submit)
