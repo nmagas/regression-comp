@@ -49,3 +49,28 @@ nn_tune <- nn_workflow %>%
 save(nn_tune, nn_workflow, file = "data/nn_tune.rda")
 
 
+
+
+
+
+
+
+
+
+
+# examining nearest neighbors performance
+
+
+load(file = "data/nn_tune.rda")
+
+nn_workflow_tuned <- nn_workflow %>% 
+  finalize_workflow(select_best(nn_tune, metric = "rmse"))
+
+nn_results <- fit(nn_workflow_tuned, loan_train)
+
+metrics <- metric_set(rmse)
+
+predict(nn_results, new_data = loan_test) %>% 
+  bind_cols(loan_test %>% select(money_made_inv)) %>% 
+  metrics(truth = money_made_inv, estimate = .pred)
+

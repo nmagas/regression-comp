@@ -48,3 +48,39 @@ rf_tune <- rf_workflow %>%
 # Write out results & workflow
 
 save(rf_tune, rf_workflow, file = "data/rf_tune.rda")
+
+
+
+
+
+
+
+# examining rf performance (4 folds, 3 repeats, only 4 predictors)
+
+
+load(file = "data/rf_tune.rda")
+
+rf_workflow_tuned <- rf_workflow %>% 
+  finalize_workflow(select_best(rf_tune, metric = "rmse"))
+
+rf_results <- fit(rf_workflow_tuned, loan_train)
+
+metrics <- metric_set(rmse)
+
+predict(rf_results, new_data = loan_test) %>% 
+  bind_cols(loan_test %>% select(money_made_inv)) %>% 
+  metrics(truth = money_made_inv, estimate = .pred)
+
+
+
+
+# rf2 submission code
+
+rf_final_predictions <- predict(rf_results, new_data = final_loan_test)
+
+submit_rf <- read_csv("data/sampleSubmission.csv") %>% 
+  bind_cols(rf_final_predictions) %>% 
+  select(-Predicted) %>% 
+  rename(Predicted = .pred)
+
+write_csv(file = "reg_results5.csv", submit_rf)

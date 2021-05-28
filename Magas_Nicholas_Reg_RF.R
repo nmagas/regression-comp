@@ -114,27 +114,21 @@ save(loan_recipe, file = "data/loan_recipe.rda")
 
 
 
-# Random Forest Tuning ----
-
-# Load package(s) ----
-library(tidyverse)
-library(tidymodels)
+# Random Forest Tuning----
 
 
-set.seed(42)
-
-# load required objects ----
+# loading necessary objects
 load(file = "data/loan_folds.rda")
 load(file = "data/loan_recipe.rda")
 
-# Define model ----
+
+# defining model
 rf_model <- rand_forest(mtry = tune(), min_n = tune()) %>% 
   set_mode("regression") %>% 
   set_engine("ranger")
 
 
 
-# set-up tuning grid ----
 
 # checking parameters
 rf_params <- parameters(rf_model) %>% 
@@ -142,26 +136,25 @@ rf_params <- parameters(rf_model) %>%
 
 
 
-# define tuning grid
+# defining tuning grid
 rf_grid <- grid_regular(rf_params, levels = 5)
 
 
-# workflow ----
+# creating rf workflow
 rf_workflow <- workflow() %>% 
   add_model(rf_model) %>% 
   add_recipe(loan_recipe)
 
 
-# Tuning/fitting ----
+# tuning
 
-# Place tuning code in here
 rf_tune <- rf_workflow %>% 
   tune_grid(resamples = loan_folds, grid = rf_grid)
 
 
 
 
-# Write out results & workflow
+# writing out results and workflow
 
 save(rf_tune, rf_workflow, file = "data/rf_tune.rda")
 

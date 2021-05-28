@@ -61,7 +61,7 @@ corrplot(cor(loan_corr2),
 
 
 
-  
+
 
 
 
@@ -114,96 +114,45 @@ save(loan_recipe, file = "data/loan_recipe.rda")
 
 
 
-# Random Forest Tuning ----
 
-# Load package(s) ----
-library(tidyverse)
-library(tidymodels)
+# Mars Model Tuning----
 
-
-set.seed(42)
-
-# load required objects ----
+# loading necessary objects
 load(file = "data/loan_folds.rda")
 load(file = "data/loan_recipe.rda")
 
-# Define model ----
-rf_model <- rand_forest(mtry = tune(), min_n = tune()) %>% 
+# defining model
+mars_model <- mars(num_terms = tune(), prod_degree =tune()) %>% 
   set_mode("regression") %>% 
-  set_engine("ranger")
+  set_engine("earth")
 
 
-
-# set-up tuning grid ----
 
 # checking parameters
-rf_params <- parameters(rf_model) %>% 
-  update(mtry = mtry(range = c(1, 10)))
+mars_params <- parameters(mars_model)
 
 
 
-# define tuning grid
-rf_grid <- grid_regular(rf_params, levels = 5)
+# defining tuning grid
+mars_grid <- grid_regular(mars_params, levels = 10)
 
 
-# workflow ----
-rf_workflow <- workflow() %>% 
-  add_model(rf_model) %>% 
+# creating workflow
+mars_workflow <- workflow() %>% 
+  add_model(mars_model) %>% 
   add_recipe(loan_recipe)
 
 
-# Tuning/fitting ----
-
-# Place tuning code in here
-rf_tune <- rf_workflow %>% 
-  tune_grid(resamples = loan_folds, grid = rf_grid)
+# tuning
+mars_tune <- mars_workflow %>% 
+  tune_grid(resamples = loan_folds, grid = mars_grid)
 
 
 
 
 # Write out results & workflow
 
-save(rf_tune, rf_workflow, file = "data/rf_tune.rda")
-
-
-
-
-
-# examining rf performance
-
-load(file = "data/rf_tune.rda")
-
-rf_workflow_tuned <- rf_workflow %>% 
-  finalize_workflow(select_best(rf_tune, metric = "rmse"))
-
-rf_results <- fit(rf_workflow_tuned, loan_train)
-
-metrics <- metric_set(rmse)
-
-predict(rf_results, new_data = loan_test) %>% 
-  bind_cols(loan_test %>% select(money_made_inv)) %>% 
-  metrics(truth = money_made_inv, estimate = .pred)
-
-
-
-
-
-# rf submission code
-
-rf_final_predictions <- predict(rf_results, new_data = final_loan_test)
-
-submit <- read_csv("data/sampleSubmission.csv") %>% 
-  bind_cols(rf_final_predictions) %>% 
-  select(-Predicted) %>% 
-  rename(Predicted = .pred)
-
-write_csv(file = "reg_results6.csv", submit)
-  
-  
-
-
-
-
+save(mars_tune, mars_workflow, file = "data/mars_tune.rda")
 
 
 
@@ -225,8 +174,9 @@ predict(mars_results, new_data = loan_test) %>%
 
 
 
+
 # mars submission code
-  
+
 mars_final_predictions <- predict(mars_results, new_data = final_loan_test)
 
 submit_mars <- read_csv("data/sampleSubmission.csv") %>% 
@@ -235,43 +185,4 @@ submit_mars <- read_csv("data/sampleSubmission.csv") %>%
   rename(Predicted = .pred)
 
 write_csv(file = "reg_results3.csv", submit)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  
-  
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
 

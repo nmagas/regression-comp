@@ -44,3 +44,31 @@ slnn_tune <- slnn_workflow %>%
 # Write out results & workflow
 
 save(slnn_tune, slnn_workflow, file = "data/slnn_tune.rda")
+
+
+
+
+
+
+
+
+
+
+
+
+
+# examining slnn performance
+
+load(file = "data/slnn_tune.rda")
+
+slnn_workflow_tuned <- slnn_workflow %>% 
+  finalize_workflow(select_best(slnn_tune, metric = "rmse"))
+
+slnn_results <- fit(slnn_workflow_tuned, loan_train)
+
+metrics <- metric_set(rmse)
+
+predict(slnn_results, new_data = loan_test) %>% 
+  bind_cols(loan_test %>% select(money_made_inv)) %>% 
+  metrics(truth = money_made_inv, estimate = .pred)
+
